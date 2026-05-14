@@ -1,0 +1,110 @@
+{
+  "theme": "light",
+  "archetype": "4_swiss_high_contrast",
+  "emotion": "authoritative, transparent, precise, functional",
+  "colors": {
+    "background": {
+      "default": "#FFFFFF",
+      "muted": "#F4F4F4",
+      "subtle": "#FAFAFA"
+    },
+    "text": {
+      "primary": "#0A0A0A",
+      "secondary": "#525252",
+      "muted": "#737373",
+      "inverse": "#FFFFFF"
+    },
+    "border": {
+      "default": "#E5E5E5",
+      "strong": "#0A0A0A",
+      "subtle": "#F0F0F0"
+    },
+    "brand": {
+      "primary": "#002FA7",
+      "primary_hover": "#002480",
+      "accent_red": "#FF2A00",
+      "accent_yellow": "#FFD700",
+      "accent_green": "#00C853"
+    },
+    "status": {
+      "success": "#00C853",
+      "warning": "#FFD700",
+      "error": "#FF2A00",
+      "info": "#002FA7"
+    }
+  },
+  "typography": {
+    "fonts": {
+      "heading": "Chivo, sans-serif",
+      "body": "IBM Plex Sans, sans-serif",
+      "mono": "IBM Plex Mono, monospace"
+    },
+    "scales": {
+      "h1": "text-4xl sm:text-5xl font-bold tracking-tighter leading-none",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight",
+      "h3": "text-xl font-semibold tracking-tight",
+      "body": "text-sm sm:text-base leading-relaxed",
+      "overline": "text-xs font-mono uppercase tracking-[0.15em] text-muted",
+      "stats": "text-3xl sm:text-4xl font-heading font-black tracking-tighter"
+    }
+  },
+  "spacing_and_layout": {
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "grid_dashboard": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-px bg-border/20 border border-border/20",
+    "grid_bento": "grid grid-cols-1 md:grid-cols-12 gap-6",
+    "padding": {
+      "section": "py-12 sm:py-20",
+      "card": "p-6 sm:p-8"
+    }
+  },
+  "surfaces_and_components": {
+    "style": "brutalist_swiss",
+    "cards": {
+      "default": "bg-white border border-border rounded-none shadow-none",
+      "interactive": "bg-white border border-strong rounded-none shadow-[4px_4px_0px_0px_rgba(10,10,10,1)] transition-transform hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_0px_rgba(10,10,10,1)]",
+      "data_widget": "bg-white border-0"
+    },
+    "buttons": {
+      "primary": "bg-strong text-inverse rounded-none px-6 py-2.5 font-medium hover:bg-brand-primary transition-colors focus:ring-2 focus:ring-brand-primary focus:ring-offset-2",
+      "secondary": "bg-white text-strong border border-strong rounded-none px-6 py-2.5 font-medium hover:bg-muted transition-colors",
+      "danger": "bg-brand-accent_red text-inverse rounded-none px-6 py-2.5 font-medium hover:opacity-90 transition-opacity"
+    },
+    "inputs": {
+      "default": "rounded-none border-strong focus-visible:ring-0 focus-visible:border-brand-primary focus-visible:ring-offset-0 bg-white"
+    },
+    "tables": {
+      "container": "border border-strong bg-white w-full text-left border-collapse",
+      "header": "border-b border-strong bg-muted font-mono text-xs uppercase tracking-wider text-secondary py-3 px-4",
+      "row": "border-b border-border hover:bg-subtle transition-colors",
+      "cell": "py-3 px-4 text-sm text-primary align-middle"
+    },
+    "badges": {
+      "default": "inline-flex items-center px-2 py-0.5 border border-strong text-xs font-mono font-medium rounded-none bg-white",
+      "active": "inline-flex items-center px-2 py-0.5 border border-strong text-xs font-mono font-medium rounded-none bg-brand-accent_green/10 text-brand-strong"
+    }
+  },
+  "visual_enhancers": {
+    "icons_library": "lucide-react",
+    "motion": "minimalist micro-interactions, sharp transitions (e.g., transition-transform duration-150 ease-out)",
+    "borders": "Expose the skeleton. Use grid gaps as 1px borders via bg-border.",
+    "effects": "No soft shadows. Use solid, hard-edged offset drop shadows for interactive elements if necessary, or strictly flat."
+  },
+  "media": {
+    "image_urls": {
+      "auth_background": {
+        "url": "https://images.unsplash.com/photo-1482053450283-3e0b78b09a70?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGdlb21ldHJpYyUyMGFyY2hpdGVjdHVyZSUyMGJsYWNrJTIwYW5kJTIwd2hpdGV8ZW58MHx8fHwxNzc4NzA2Nzc3fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Abstract geometric architecture, black and white curved facade. Use as background on Auth/Login split-screen."
+      }
+    }
+  },
+  "instructions_to_main_agent": [
+    "Build a strict, Swiss-brutalist styled SaaS dashboard.",
+    "Do NOT use soft rounded corners (`rounded-md`, `rounded-lg`). Enforce `rounded-none` globally for cards, buttons, inputs, and modals.",
+    "Use a monochrome palette (black, white, grays) for structure, and reserve International Klein Blue (#002FA7) or Signal Red (#FF2A00) exclusively for primary CTAs and critical states.",
+    "For the data tables (Access Lists, Connected Emails), use prominent borders and monospace headers. The UI should look technical and 'honest'—exposed structures.",
+    "Use Shadcn UI components but override their default rounded styles and subtle shadows with sharp borders (`border-black`) and flat styling.",
+    "Ensure the dashboard uses a dense, 'Control Room' grid layout for the overview.",
+    "Always apply `data-testid` attributes to all actionable elements.",
+    "For fonts, inject Google Fonts: 'Chivo' (400,600,700) for headings, 'IBM Plex Sans' (400,500) for body, and 'IBM Plex Mono' (400,500) for overlines/stats."
+  ]
+}
