@@ -1,5 +1,5 @@
 app = "mailshare"
-primary_region = "mia"
+primary_region = "iad"
 
 [build]
   dockerfile = "Dockerfile"
