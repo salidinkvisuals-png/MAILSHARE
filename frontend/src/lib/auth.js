@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "",
+  baseURL: "",
   withCredentials: true,
 });
 
@@ -12,7 +12,7 @@ API.interceptors.response.use(
     if (err.response?.status === 401 && !err.config._retry) {
       err.config._retry = true;
       try {
-        await API.post("/api/auth/refresh");
+        await axios.post("/api/auth/refresh", {}, { withCredentials: true });
         return API(err.config);
       } catch {
         // refresh failed
