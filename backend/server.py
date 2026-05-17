@@ -782,7 +782,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Serve React frontend
+from fastapi.staticfiles import StaticFiles
+import os
 
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
 
 @app.on_event("shutdown")
 async def shutdown():
