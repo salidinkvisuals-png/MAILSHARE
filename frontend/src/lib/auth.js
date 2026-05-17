@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8001",
+  baseURL: process.env.REACT_APP_API_URL || "",
   withCredentials: true,
 });
 
@@ -15,7 +15,7 @@ API.interceptors.response.use(
         await API.post("/api/auth/refresh");
         return API(err.config);
       } catch {
-        // refresh failed — user must log in again
+        // refresh failed
       }
     }
     return Promise.reject(err);
