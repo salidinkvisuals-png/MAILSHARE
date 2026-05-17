@@ -19,6 +19,7 @@ from bson import ObjectId
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, EmailStr, Field
 from typing import Literal
@@ -777,18 +778,31 @@ app.include_router(api)
 frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url, "http://localhost:3000"],
+    allow_origins=[frontend_url, "http://localhost:3000", "https://mailshare.fly.dev"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# Serve React frontend
-from fastapi.staticfiles import StaticFiles
-import os
+
+# ---------------- Serve React frontend ----------------
+from fastapi.responses import FileResponse
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
+
 if os.path.exists(static_dir):
-    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+    # Serve static assets (JS, CSS, images)
+    app.mount("/static", StaticFiles(directory=os.path.join(static_dir, "static")), name="assets")
+
+    # Catch-all: serve index.html for all non-API routes
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        index = os.path.join(static_dir, "index.html")
+        return FileResponse(index)
+
+    logger.info(f"Serving frontend from {static_dir}")
+else:
+    logger.warning(f"Static directory not found: {static_dir}")
+
 
 @app.on_event("shutdown")
 async def shutdown():
