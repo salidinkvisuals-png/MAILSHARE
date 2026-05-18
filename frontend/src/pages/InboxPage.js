@@ -67,7 +67,15 @@ export default function InboxPage() {
                 {selected.label && <div><p className="text-xs text-gray-400 mb-1">Label</p><span className="text-xs bg-purple-50 text-purple-600 px-2 py-1 rounded-full font-medium">{selected.label}</span></div>}
                 <div><p className="text-xs text-gray-400 mb-1">Received</p><p className="text-sm text-gray-700">{selected.received_at ? new Date(selected.received_at).toLocaleString() : "—"}</p></div>
               </div>
-              <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{selected.body}</div>
+              {selected.body_type === "html" ? (
+                <div
+                  className="email-html-body"
+                  dangerouslySetInnerHTML={{ __html: selected.body }}
+                  style={{ maxWidth: "100%", overflow: "auto" }}
+                />
+              ) : (
+                <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{selected.body}</div>
+              )}
             </div>
           ) : (
             <div className="h-full flex items-center justify-center text-gray-300">
