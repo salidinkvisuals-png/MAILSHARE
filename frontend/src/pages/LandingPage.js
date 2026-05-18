@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Shield, Filter, Users, Eye, Zap, Lock } from "lucide-react";
+import { ArrowRight, Shield, Filter, Users, Eye, Zap, Lock, Mail } from "lucide-react";
 
 export default function LandingPage() {
   const nav = useNavigate();
@@ -15,22 +15,27 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-white brutalist-grid-bg font-body">
+    <div className="min-h-screen bg-white font-body">
       {/* NAV */}
-      <nav className="border-b border-black bg-white sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-14">
-          <span className="font-heading font-black text-lg tracking-tighter">MAILSHARE</span>
-          <div className="flex items-center gap-0">
+      <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-purple-100">
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between h-16">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-purple-600 flex items-center justify-center">
+              <Mail size={16} className="text-white" />
+            </div>
+            <span className="font-bold text-lg text-gray-900">Mailshare</span>
+          </div>
+          <div className="flex items-center gap-3">
             <button
               onClick={() => nav("/login")}
-              className="px-5 py-2 text-sm font-medium border-r border-black hover:bg-neutral-100 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-purple-600 transition-colors rounded-lg hover:bg-purple-50"
               data-testid="nav-login"
             >
               Sign in
             </button>
             <button
               onClick={() => nav("/register")}
-              className="px-5 py-2 text-sm font-medium bg-black text-white hover:bg-[#002FA7] transition-colors"
+              className="px-4 py-2 text-sm font-medium bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
               data-testid="nav-register"
             >
               Get started
@@ -40,147 +45,159 @@ export default function LandingPage() {
       </nav>
 
       {/* HERO */}
-      <section className="max-w-7xl mx-auto px-6 pt-24 pb-20 border-b border-black">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <p className="overline mb-6">Email access, redefined</p>
-            <h1 className="font-heading font-black text-5xl sm:text-6xl tracking-tighter leading-none mb-8">
-              Share your inbox<br />
-              <span className="klein">without sharing</span><br />
-              your password.
-            </h1>
-            <p className="text-neutral-600 text-lg leading-relaxed mb-10 max-w-md">
-              Give teammates, clients, or auditors a filtered view of your Gmail or Outlook. 
-              They see exactly what you choose — nothing else. Revoke in one click.
-            </p>
-            <div className="flex gap-0">
-              <button
-                onClick={() => nav("/register")}
-                className="flex items-center gap-2 bg-black text-white px-8 py-3.5 font-medium hard-shadow hover:bg-[#002FA7] transition-colors"
-                data-testid="hero-cta"
-              >
-                Start for free <ArrowRight size={16} />
-              </button>
-              <button
-                onClick={() => nav("/login")}
-                className="flex items-center gap-2 border border-black px-8 py-3.5 font-medium hover:bg-neutral-50 transition-colors"
-              >
-                Sign in
-              </button>
-            </div>
+      <section className="max-w-6xl mx-auto px-6 pt-24 pb-20">
+        <div className="text-center max-w-3xl mx-auto">
+          <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 px-4 py-1.5 rounded-full text-sm font-medium mb-8">
+            <Zap size={14} />
+            Gmail & Outlook supported
           </div>
+          <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 tracking-tight leading-tight mb-6">
+            Share your inbox
+            <span className="text-purple-600"> without sharing</span>
+            <br />your password.
+          </h1>
+          <p className="text-xl text-gray-500 leading-relaxed mb-10 max-w-2xl mx-auto">
+            Give teammates, clients, or auditors a filtered view of your Gmail or Outlook.
+            They see exactly what you choose — nothing else.
+          </p>
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={() => nav("/register")}
+              className="flex items-center gap-2 bg-purple-600 text-white px-8 py-3.5 rounded-xl font-semibold hover:bg-purple-700 transition-colors"
+              data-testid="hero-cta"
+            >
+              Start for free <ArrowRight size={18} />
+            </button>
+            <button
+              onClick={() => nav("/login")}
+              className="flex items-center gap-2 border border-gray-200 text-gray-700 px-8 py-3.5 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+            >
+              Sign in
+            </button>
+          </div>
+        </div>
 
-          {/* Mock UI preview */}
-          <div className="border border-black hard-shadow-sm bg-white hidden lg:block">
-            <div className="border-b border-black bg-neutral-50 px-4 py-2 flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full border border-black" />
-              <div className="w-3 h-3 rounded-full border border-black" />
-              <div className="w-3 h-3 rounded-full border border-black" />
-              <span className="font-mono text-xs text-neutral-500 ml-2">mailshare.app/shared/inv_abc123</span>
+        {/* Mock UI */}
+        <div className="mt-20 bg-white rounded-2xl border border-gray-100 shadow-xl shadow-purple-100/50 overflow-hidden max-w-3xl mx-auto">
+          <div className="bg-gray-50 border-b border-gray-100 px-4 py-3 flex items-center gap-2">
+            <div className="flex gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-red-400" />
+              <div className="w-3 h-3 rounded-full bg-yellow-400" />
+              <div className="w-3 h-3 rounded-full bg-green-400" />
             </div>
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-neutral-200">
-                <div>
-                  <p className="font-mono text-xs uppercase tracking-widest text-neutral-500">Shared view</p>
-                  <p className="font-heading font-bold text-sm mt-0.5">Finance — from billing@stripe.com</p>
-                </div>
-                <span className="border border-black font-mono text-xs px-2 py-0.5 bg-green-50 text-green-800">Active</span>
+            <span className="text-xs text-gray-400 mx-auto">mailshare.app/shared/inv_abc123</span>
+          </div>
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Shared view</p>
+                <p className="font-semibold text-gray-900">Finance — from billing@stripe.com</p>
               </div>
-              {[
-                { from: "Stripe", subj: "Invoice January — $129.00", time: "2h ago" },
-                { from: "AWS", subj: "Billing alert: $312 this month", time: "1d ago" },
-                { from: "Vercel", subj: "Pro plan renewed — $20", time: "3d ago" },
-              ].map((e, i) => (
-                <div key={i} className="flex items-start gap-3 py-2.5 border-b border-neutral-100 last:border-0">
-                  <div className="w-7 h-7 border border-black bg-neutral-100 flex items-center justify-center font-mono text-xs font-bold flex-shrink-0 mt-0.5">
-                    {e.from[0]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">{e.from}</p>
-                    <p className="text-xs text-neutral-500 truncate">{e.subj}</p>
-                  </div>
-                  <span className="text-xs text-neutral-400 flex-shrink-0">{e.time}</span>
-                </div>
-              ))}
+              <span className="bg-green-50 text-green-700 text-xs font-medium px-3 py-1 rounded-full">Active</span>
             </div>
+            {[
+              { from: "Stripe", subj: "Invoice January — $129.00", time: "2h ago", color: "bg-blue-100 text-blue-700" },
+              { from: "AWS", subj: "Billing alert: $312 this month", time: "1d ago", color: "bg-orange-100 text-orange-700" },
+              { from: "Vercel", subj: "Pro plan renewed — $20", time: "3d ago", color: "bg-purple-100 text-purple-700" },
+            ].map((e, i) => (
+              <div key={i} className="flex items-center gap-3 py-3 border-b border-gray-50 last:border-0">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${e.color}`}>
+                  {e.from[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">{e.from}</p>
+                  <p className="text-xs text-gray-400 truncate">{e.subj}</p>
+                </div>
+                <span className="text-xs text-gray-300">{e.time}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* STATS BAR */}
-      <section className="border-b border-black bg-black text-white">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-3 divide-x divide-neutral-700">
+      {/* STATS */}
+      <section className="bg-purple-600 text-white">
+        <div className="max-w-6xl mx-auto px-6 grid grid-cols-3 divide-x divide-purple-500">
           {[
             { n: "2", label: "Email providers" },
             { n: "∞", label: "Filters per account" },
             { n: "1-click", label: "Revoke access" },
           ].map((s) => (
-            <div key={s.label} className="py-8 px-8 text-center">
-              <p className="font-heading font-black text-4xl tracking-tighter mb-1">{s.n}</p>
-              <p className="font-mono text-xs uppercase tracking-widest text-neutral-400">{s.label}</p>
+            <div key={s.label} className="py-10 px-8 text-center">
+              <p className="text-4xl font-bold mb-1">{s.n}</p>
+              <p className="text-purple-200 text-sm">{s.label}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* FEATURES */}
-      <section className="max-w-7xl mx-auto px-6 py-20 border-b border-black">
-        <p className="overline mb-3">How it works</p>
-        <h2 className="font-heading font-bold text-3xl tracking-tight mb-12">Everything you need, nothing you don't.</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-black border border-black">
+      <section className="max-w-6xl mx-auto px-6 py-24">
+        <div className="text-center mb-16">
+          <p className="text-purple-600 font-semibold text-sm uppercase tracking-wider mb-3">Features</p>
+          <h2 className="text-3xl font-bold text-gray-900">Everything you need, nothing you don't.</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="bg-white p-8 hover:bg-neutral-50 transition-colors">
-              <div className="w-10 h-10 border border-black flex items-center justify-center mb-5">
-                <Icon size={18} />
+            <div key={title} className="bg-white border border-gray-100 rounded-2xl p-6 hover:border-purple-200 hover:shadow-lg hover:shadow-purple-50 transition-all">
+              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center mb-4">
+                <Icon size={20} className="text-purple-600" />
               </div>
-              <h3 className="font-heading font-bold text-base mb-2">{title}</h3>
-              <p className="text-sm text-neutral-600 leading-relaxed">{body}</p>
+              <h3 className="font-semibold text-gray-900 mb-2">{title}</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">{body}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* HOW IT WORKS STEPS */}
-      <section className="max-w-7xl mx-auto px-6 py-20 border-b border-black">
-        <p className="overline mb-3">Three steps</p>
-        <h2 className="font-heading font-bold text-3xl tracking-tight mb-12">Up and running in minutes.</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-black border border-black">
-          {[
-            { n: "01", title: "Connect your email", body: "Authorise Gmail or Outlook via OAuth. Your credentials never touch our servers." },
-            { n: "02", title: "Define a filter", body: "Set rules: show only emails from billing@stripe.com, label Finance, last 30 days." },
-            { n: "03", title: "Share with a recipient", body: "Enter a recipient email. They get a view-only link to exactly those emails." },
-          ].map((s) => (
-            <div key={s.n} className="bg-white p-10">
-              <span className="font-heading font-black text-5xl text-neutral-200 block mb-4">{s.n}</span>
-              <h3 className="font-heading font-bold text-lg mb-3">{s.title}</h3>
-              <p className="text-sm text-neutral-600 leading-relaxed">{s.body}</p>
-            </div>
-          ))}
+      {/* HOW IT WORKS */}
+      <section className="bg-purple-50 py-24">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <p className="text-purple-600 font-semibold text-sm uppercase tracking-wider mb-3">How it works</p>
+            <h2 className="text-3xl font-bold text-gray-900">Up and running in minutes.</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { n: "01", title: "Connect your email", body: "Authorise Gmail or Outlook via OAuth. Your credentials never touch our servers." },
+              { n: "02", title: "Define a filter", body: "Set rules: show only emails from billing@stripe.com, label Finance, last 30 days." },
+              { n: "03", title: "Share with a recipient", body: "Enter a recipient email. They get a view-only link to exactly those emails." },
+            ].map((s) => (
+              <div key={s.n} className="bg-white rounded-2xl p-8 border border-purple-100">
+                <span className="text-5xl font-bold text-purple-100 block mb-4">{s.n}</span>
+                <h3 className="font-semibold text-gray-900 text-lg mb-3">{s.title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{s.body}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="bg-[#002FA7] text-white">
-        <div className="max-w-7xl mx-auto px-6 py-20 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div>
-            <h2 className="font-heading font-black text-3xl tracking-tight mb-2">Ready to share smarter?</h2>
-            <p className="text-blue-200 text-sm">Free to start. No credit card required.</p>
-          </div>
+      <section className="max-w-6xl mx-auto px-6 py-24">
+        <div className="bg-purple-600 rounded-3xl p-12 text-center text-white">
+          <h2 className="text-3xl font-bold mb-3">Ready to share smarter?</h2>
+          <p className="text-purple-200 mb-8">Free to start. No credit card required.</p>
           <button
             onClick={() => nav("/register")}
-            className="flex items-center gap-2 bg-white text-black px-8 py-3.5 font-medium hard-shadow hover:bg-neutral-100 transition-colors flex-shrink-0"
+            className="inline-flex items-center gap-2 bg-white text-purple-600 px-8 py-3.5 rounded-xl font-semibold hover:bg-purple-50 transition-colors"
             data-testid="footer-cta"
           >
-            Create your account <ArrowRight size={16} />
+            Create your account <ArrowRight size={18} />
           </button>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-black">
-        <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
-          <span className="font-heading font-black text-sm tracking-tighter">MAILSHARE</span>
-          <p className="font-mono text-xs text-neutral-400">© 2025 Mailshare. All rights reserved.</p>
+      <footer className="border-t border-gray-100">
+        <div className="max-w-6xl mx-auto px-6 py-8 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-purple-600 flex items-center justify-center">
+              <Mail size={12} className="text-white" />
+            </div>
+            <span className="font-bold text-gray-900">Mailshare</span>
+          </div>
+          <p className="text-sm text-gray-400">© 2025 Mailshare. All rights reserved.</p>
         </div>
       </footer>
     </div>
