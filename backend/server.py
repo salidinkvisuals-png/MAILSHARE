@@ -167,19 +167,35 @@ def gmail_get_message_detail(access_token: str, msg_id: str) -> Optional[dict]:
 def parse_gmail_message(msg: dict, account_id: str, owner_id: str) -> dict:
     headers = {h["name"].lower(): h["value"] for h in msg.get("payload", {}).get("headers", [])}
 
-    def extract_body(part):
+    def extract_html(part):
+        if part.get("mimeType") == "text/html" and part.get("body", {}).get("data"):
+            return base64.urlsafe_b64decode(part["body"]["data"]).decode("utf-8", errors="replace")
+        for p in part.get("parts", []):
+            result = extract_html(p)
+            if result:
+                return result
+        return ""
+
+    def extract_text(part):
         if part.get("mimeType") == "text/plain" and part.get("body", {}).get("data"):
             return base64.urlsafe_b64decode(part["body"]["data"]).decode("utf-8", errors="replace")
         for p in part.get("parts", []):
-            result = extract_body(p)
+            result = extract_text(p)
             if result:
                 return result
         return ""
 
     payload = msg.get("payload", {})
-    body = extract_body(payload)
+
+    # Prefer HTML for proper rendering, fall back to plain text
+    body = extract_html(payload)
+    body_type = "html"
+    if not body:
+        body = extract_text(payload)
+        body_type = "text"
     if not body and payload.get("body", {}).get("data"):
         body = base64.urlsafe_b64decode(payload["body"]["data"]).decode("utf-8", errors="replace")
+        body_type = "text"
 
     from_raw = headers.get("from", "")
     from_name, from_email = "", from_raw
@@ -206,7 +222,8 @@ def parse_gmail_message(msg: dict, account_id: str, owner_id: str) -> dict:
         "from_email": from_email.lower(),
         "from_name": from_name,
         "subject": headers.get("subject", "(no subject)"),
-        "body": body[:5000],
+        "body": body[:50000],
+        "body_type": body_type,
         "label": label,
         "received_at": received_at,
         "read": "UNREAD" not in label_ids,
