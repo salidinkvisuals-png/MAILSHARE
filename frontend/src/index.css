@@ -71,3 +71,8 @@ body {
 .animate-fade-in { animation: fadeIn 0.2s ease-out both; }
 
 ::selection { background: #7C3AED; color: #fff; }
+
+/* HTML email rendering */
+.email-html-body img { max-width: 100%; height: auto; }
+.email-html-body a { color: #7C3AED; }
+.email-html-body { font-size: 14px; line-height: 1.6; }
