@@ -28,13 +28,18 @@ export default function DashboardLayout() {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="h-14 flex items-center px-6 border-b border-black flex-shrink-0">
-        <span className="font-heading font-black text-base tracking-tighter">MAILSHARE</span>
+      <div className="h-16 flex items-center px-6 border-b border-purple-100">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-purple-600 flex items-center justify-center">
+            <Mail size={16} className="text-white" />
+          </div>
+          <span className="font-bold text-gray-900">Mailshare</span>
+        </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-4 overflow-y-auto" data-testid="sidebar-nav">
-        <p className="overline px-6 mb-3">Workspace</p>
+      <nav className="flex-1 py-4 px-3 overflow-y-auto" data-testid="sidebar-nav">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">Workspace</p>
         {navItems.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -42,58 +47,57 @@ export default function DashboardLayout() {
             end={end}
             onClick={() => setMobileOpen(false)}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-6 py-2.5 text-sm font-medium transition-colors ${
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
                 isActive
-                  ? "bg-black text-white"
-                  : "text-neutral-600 hover:bg-neutral-100 hover:text-black"
+                  ? "bg-purple-600 text-white"
+                  : "text-gray-600 hover:bg-purple-50 hover:text-purple-700"
               }`
             }
             data-testid={`nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
           >
-            <Icon size={16} />
+            <Icon size={17} />
             {label}
-            {({ isActive }) => isActive && <ChevronRight size={14} className="ml-auto opacity-60" />}
           </NavLink>
         ))}
       </nav>
 
       {/* User */}
-      <div className="border-t border-black p-4 flex-shrink-0">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-8 h-8 border border-black bg-neutral-100 flex items-center justify-center font-mono text-xs font-bold">
+      <div className="border-t border-purple-100 p-4">
+        <div className="flex items-center gap-3 mb-3 px-1">
+          <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-sm">
             {(user?.name || user?.email || "U")[0].toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium truncate">{user?.name || "User"}</p>
-            <p className="font-mono text-xs text-neutral-400 truncate">{user?.email}</p>
+            <p className="text-sm font-semibold text-gray-900 truncate">{user?.name || "User"}</p>
+            <p className="text-xs text-gray-400 truncate">{user?.email}</p>
           </div>
         </div>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors border border-transparent hover:border-neutral-200"
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
           data-testid="btn-logout"
         >
-          <LogOut size={13} /> Sign out
+          <LogOut size={15} /> Sign out
         </button>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-neutral-50 font-body flex">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-56 border-r border-black bg-white flex-shrink-0 fixed top-0 left-0 h-full z-40">
+      <aside className="hidden lg:flex flex-col w-60 border-r border-purple-100 bg-white fixed top-0 left-0 h-full z-40">
         <SidebarContent />
       </aside>
 
       {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
-          <div className="w-56 bg-white border-r border-black flex flex-col">
+          <div className="w-60 bg-white border-r border-purple-100 flex flex-col">
             <SidebarContent />
           </div>
           <button
-            className="flex-1 bg-black bg-opacity-40"
+            className="flex-1 bg-black/30 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
             aria-label="Close menu"
           />
@@ -101,17 +105,22 @@ export default function DashboardLayout() {
       )}
 
       {/* Main */}
-      <div className="flex-1 lg:ml-56 flex flex-col min-h-screen">
+      <div className="flex-1 lg:ml-60 flex flex-col min-h-screen">
         {/* Mobile header */}
-        <header className="lg:hidden h-14 border-b border-black bg-white flex items-center px-4 gap-4 sticky top-0 z-30">
+        <header className="lg:hidden h-16 border-b border-purple-100 bg-white flex items-center px-4 gap-4 sticky top-0 z-30">
           <button
             onClick={() => setMobileOpen(true)}
-            className="p-1"
+            className="p-2 rounded-xl hover:bg-purple-50 transition-colors"
             data-testid="mobile-menu-btn"
           >
-            <Menu size={20} />
+            <Menu size={20} className="text-gray-600" />
           </button>
-          <span className="font-heading font-black text-base tracking-tighter">MAILSHARE</span>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-purple-600 flex items-center justify-center">
+              <Mail size={14} className="text-white" />
+            </div>
+            <span className="font-bold text-gray-900">Mailshare</span>
+          </div>
         </header>
 
         <main className="flex-1 p-6 lg:p-8">
