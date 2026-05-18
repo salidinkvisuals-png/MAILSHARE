@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { API } from "@/lib/auth";
 import { toast } from "sonner";
-import { ArrowLeft, Mail, Loader2, Clock, Tag } from "lucide-react";
+import { ArrowLeft, Mail, Loader2 } from "lucide-react";
 
 export default function InboxPage() {
   const { accountId } = useParams();
@@ -13,10 +13,7 @@ export default function InboxPage() {
   const nav = useNavigate();
 
   useEffect(() => {
-    Promise.all([
-      API.get("/api/accounts"),
-      API.get(`/api/accounts/${accountId}/emails`),
-    ])
+    Promise.all([API.get("/api/accounts"), API.get(`/api/accounts/${accountId}/emails`)])
       .then(([acc, em]) => {
         setAccount(acc.data.find((a) => a.id === accountId));
         setEmails(em.data);
@@ -26,98 +23,54 @@ export default function InboxPage() {
       .finally(() => setLoading(false));
   }, [accountId]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 size={20} className="animate-spin text-neutral-400" />
-      </div>
-    );
-  }
+  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 size={20} className="animate-spin text-purple-400" /></div>;
 
   return (
     <div className="animate-fade-up" data-testid="inbox-page">
       <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => nav("/app/accounts")}
-          className="p-1.5 hover:bg-neutral-200 transition-colors"
-          data-testid="btn-back"
-        >
-          <ArrowLeft size={16} />
+        <button onClick={() => nav("/app/accounts")} className="p-2 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors">
+          <ArrowLeft size={18} />
         </button>
         <div>
-          <p className="overline">{account?.provider || "Account"}</p>
-          <h1 className="font-heading font-bold text-2xl tracking-tight">{account?.email || accountId}</h1>
+          <p className="text-xs text-gray-400 capitalize">{account?.provider}</p>
+          <h1 className="text-xl font-bold text-gray-900">{account?.email || accountId}</h1>
         </div>
       </div>
 
-      <div className="border border-black bg-white flex" style={{ minHeight: "500px" }}>
+      <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex" style={{ minHeight: "500px" }}>
         {/* Email list */}
-        <div className="w-72 border-r border-black flex-shrink-0 overflow-y-auto" data-testid="email-list">
+        <div className="w-72 border-r border-gray-100 flex-shrink-0 overflow-y-auto">
           {emails.length === 0 ? (
             <div className="p-8 text-center">
-              <Mail size={24} className="mx-auto text-neutral-300 mb-2" />
-              <p className="text-sm text-neutral-400">No emails</p>
+              <Mail size={24} className="mx-auto text-gray-200 mb-2" />
+              <p className="text-sm text-gray-400">No emails</p>
             </div>
-          ) : (
-            emails.map((e) => (
-              <button
-                key={e.id}
-                onClick={() => setSelected(e)}
-                className={`w-full text-left px-4 py-3 border-b border-neutral-100 hover:bg-neutral-50 transition-colors ${
-                  selected?.id === e.id ? "bg-neutral-100 border-l-2 border-l-black" : ""
-                }`}
-                data-testid={`email-item-${e.id}`}
-              >
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <p className="text-xs font-medium truncate">{e.from_name || e.from_email}</p>
-                  <span className="font-mono text-xs text-neutral-400 flex-shrink-0">
-                    {formatTime(e.received_at)}
-                  </span>
-                </div>
-                <p className="text-xs text-neutral-600 truncate mb-1">{e.subject}</p>
-                {e.label && (
-                  <span className="font-mono text-xs border border-neutral-200 px-1.5 py-0.5 text-neutral-500">
-                    {e.label}
-                  </span>
-                )}
-              </button>
-            ))
-          )}
+          ) : emails.map((e) => (
+            <button key={e.id} onClick={() => setSelected(e)} className={`w-full text-left px-4 py-3.5 border-b border-gray-50 hover:bg-purple-50 transition-colors ${selected?.id === e.id ? "bg-purple-50 border-l-2 border-l-purple-500" : ""}`}>
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <p className="text-xs font-semibold text-gray-900 truncate">{e.from_name || e.from_email}</p>
+                <span className="text-xs text-gray-300 flex-shrink-0">{formatTime(e.received_at)}</span>
+              </div>
+              <p className="text-xs text-gray-500 truncate mb-1">{e.subject}</p>
+              {e.label && <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">{e.label}</span>}
+            </button>
+          ))}
         </div>
 
         {/* Email detail */}
-        <div className="flex-1 p-6 overflow-y-auto" data-testid="email-detail">
+        <div className="flex-1 p-6 overflow-y-auto">
           {selected ? (
             <div>
-              <h2 className="font-heading font-bold text-xl tracking-tight mb-4">{selected.subject}</h2>
-              <div className="flex flex-wrap gap-4 mb-6 pb-6 border-b border-neutral-100">
-                <div>
-                  <p className="overline mb-0.5">From</p>
-                  <p className="text-sm">
-                    {selected.from_name
-                      ? `${selected.from_name} <${selected.from_email}>`
-                      : selected.from_email}
-                  </p>
-                </div>
-                {selected.label && (
-                  <div>
-                    <p className="overline mb-0.5">Label</p>
-                    <span className="font-mono text-xs border border-black px-2 py-0.5">
-                      {selected.label}
-                    </span>
-                  </div>
-                )}
-                <div>
-                  <p className="overline mb-0.5">Received</p>
-                  <p className="text-sm">{selected.received_at ? new Date(selected.received_at).toLocaleString() : "—"}</p>
-                </div>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">{selected.subject}</h2>
+              <div className="flex flex-wrap gap-6 mb-6 pb-6 border-b border-gray-100">
+                <div><p className="text-xs text-gray-400 mb-1">From</p><p className="text-sm text-gray-700">{selected.from_name ? `${selected.from_name} <${selected.from_email}>` : selected.from_email}</p></div>
+                {selected.label && <div><p className="text-xs text-gray-400 mb-1">Label</p><span className="text-xs bg-purple-50 text-purple-600 px-2 py-1 rounded-full font-medium">{selected.label}</span></div>}
+                <div><p className="text-xs text-gray-400 mb-1">Received</p><p className="text-sm text-gray-700">{selected.received_at ? new Date(selected.received_at).toLocaleString() : "—"}</p></div>
               </div>
-              <div className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">
-                {selected.body}
-              </div>
+              <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{selected.body}</div>
             </div>
           ) : (
-            <div className="h-full flex items-center justify-center text-neutral-400">
+            <div className="h-full flex items-center justify-center text-gray-300">
               <p className="text-sm">Select an email to read</p>
             </div>
           )}
@@ -130,8 +83,7 @@ export default function InboxPage() {
 function formatTime(iso) {
   if (!iso) return "";
   const d = new Date(iso);
-  const now = new Date();
-  const diff = (now - d) / 1000;
+  const diff = (Date.now() - d) / 1000;
   if (diff < 3600) return `${Math.floor(diff / 60)}m`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
   return `${Math.floor(diff / 86400)}d`;
