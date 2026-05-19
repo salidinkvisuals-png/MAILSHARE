@@ -755,6 +755,177 @@ async def root():
     return {"ok": True, "service": "mailshare"}
 
 
+# ---------------- Settings / User Management ----------------
+def require_admin(user: dict = Depends(get_current_user)):
+    if user.get("role") not in ("admin", "owner"):
+        raise HTTPException(403, "Admin access required")
+    return user
+
+
+class UpdateProfileIn(BaseModel):
+    name: str = ""
+    email: Optional[EmailStr] = None
+    current_password: str = ""
+    new_password: str = ""
+
+
+class CreateUserIn(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=6)
+    name: str = ""
+    role: Literal["user", "admin"] = "user"
+
+
+class UpdateUserIn(BaseModel):
+    name: str = ""
+    role: Literal["user", "admin"] = "user"
+    password: str = ""
+
+
+class AppSettingsIn(BaseModel):
+    app_name: str = ""
+    support_email: str = ""
+
+
+@api.get("/settings/profile")
+async def get_profile(user: dict = Depends(get_current_user)):
+    return serialize_user(user)
+
+
+@api.put("/settings/profile")
+async def update_profile(body: UpdateProfileIn, user: dict = Depends(get_current_user)):
+    updates = {}
+    if body.name:
+        updates["name"] = body.name
+    if body.email and body.email.lower() != user["email"]:
+        existing = await db.users.find_one({"email": body.email.lower()})
+        if existing:
+            raise HTTPException(400, "Email already in use")
+        updates["email"] = body.email.lower()
+    if body.new_password:
+        if not body.current_password:
+            raise HTTPException(400, "Current password required to set new password")
+        if not verify_password(body.current_password, user["password_hash"]):
+            raise HTTPException(400, "Current password is incorrect")
+        updates["password_hash"] = hash_password(body.new_password)
+    if updates:
+        await db.users.update_one({"_id": user["_id"]}, {"$set": updates})
+        await log_activity(str(user["_id"]), "profile.update", {"fields": list(updates.keys())})
+    updated = await db.users.find_one({"_id": user["_id"]})
+    return serialize_user(updated)
+
+
+@api.get("/settings/users")
+async def list_users(user: dict = Depends(require_admin)):
+    out = []
+    async for u in db.users.find({}).sort("created_at", -1):
+        u["id"] = str(u.pop("_id"))
+        u.pop("password_hash", None)
+        u["created_at"] = u["created_at"].isoformat() if isinstance(u.get("created_at"), datetime) else u.get("created_at")
+        u["accounts_count"] = await db.accounts.count_documents({"owner_id": u["id"]})
+        u["shares_count"] = await db.shares.count_documents({"owner_id": u["id"]})
+        out.append(u)
+    return out
+
+
+@api.post("/settings/users")
+async def create_user(body: CreateUserIn, user: dict = Depends(require_admin)):
+    email = body.email.lower()
+    if await db.users.find_one({"email": email}):
+        raise HTTPException(400, "Email already registered")
+    doc = {
+        "email": email,
+        "password_hash": hash_password(body.password),
+        "name": body.name or email.split("@")[0],
+        "role": body.role,
+        "created_at": datetime.now(timezone.utc),
+        "created_by": str(user["_id"]),
+    }
+    res = await db.users.insert_one(doc)
+    await log_activity(str(user["_id"]), "user.create", {"email": email, "role": body.role})
+    doc["id"] = str(res.inserted_id)
+    doc.pop("_id", None)
+    doc.pop("password_hash", None)
+    doc["created_at"] = doc["created_at"].isoformat()
+    return doc
+
+
+@api.put("/settings/users/{user_id}")
+async def update_user(user_id: str, body: UpdateUserIn, user: dict = Depends(require_admin)):
+    target = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not target:
+        raise HTTPException(404, "User not found")
+    if target.get("role") == "owner" and str(user["_id"]) != user_id:
+        raise HTTPException(403, "Cannot modify owner account")
+    updates = {}
+    if body.name:
+        updates["name"] = body.name
+    if body.role:
+        updates["role"] = body.role
+    if body.password:
+        updates["password_hash"] = hash_password(body.password)
+    if updates:
+        await db.users.update_one({"_id": ObjectId(user_id)}, {"$set": updates})
+        await log_activity(str(user["_id"]), "user.update", {"user_id": user_id, "fields": list(updates.keys())})
+    updated = await db.users.find_one({"_id": ObjectId(user_id)})
+    updated["id"] = str(updated.pop("_id"))
+    updated.pop("password_hash", None)
+    updated["created_at"] = updated["created_at"].isoformat() if isinstance(updated.get("created_at"), datetime) else updated.get("created_at")
+    return updated
+
+
+@api.delete("/settings/users/{user_id}")
+async def delete_user(user_id: str, user: dict = Depends(require_admin)):
+    target = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not target:
+        raise HTTPException(404, "User not found")
+    if target.get("role") == "owner":
+        raise HTTPException(403, "Cannot delete owner account")
+    if str(user["_id"]) == user_id:
+        raise HTTPException(400, "Cannot delete your own account")
+    await db.users.delete_one({"_id": ObjectId(user_id)})
+    await log_activity(str(user["_id"]), "user.delete", {"email": target.get("email")})
+    return {"ok": True}
+
+
+@api.get("/settings/app")
+async def get_app_settings(user: dict = Depends(require_admin)):
+    settings = await db.app_settings.find_one({"_id": "global"})
+    if not settings:
+        return {"app_name": "Mailshare", "support_email": ""}
+    settings.pop("_id", None)
+    return settings
+
+
+@api.put("/settings/app")
+async def update_app_settings(body: AppSettingsIn, user: dict = Depends(require_admin)):
+    await db.app_settings.update_one(
+        {"_id": "global"},
+        {"$set": {"app_name": body.app_name, "support_email": body.support_email, "updated_by": str(user["_id"]), "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+    await log_activity(str(user["_id"]), "settings.update", {"app_name": body.app_name})
+    return {"ok": True}
+
+
+@api.get("/settings/stats")
+async def get_stats(user: dict = Depends(require_admin)):
+    total_users = await db.users.count_documents({})
+    total_accounts = await db.accounts.count_documents({})
+    total_filters = await db.filters.count_documents({})
+    total_shares = await db.shares.count_documents({})
+    total_emails = await db.emails.count_documents({})
+    active_shares = await db.shares.count_documents({"status": "active"})
+    return {
+        "total_users": total_users,
+        "total_accounts": total_accounts,
+        "total_filters": total_filters,
+        "total_shares": total_shares,
+        "active_shares": active_shares,
+        "total_emails": total_emails,
+    }
+
+
 # ---------------- Startup ----------------
 async def seed_admin():
     admin_email = os.environ.get("ADMIN_EMAIL", "owner@mailshare.app").lower()
