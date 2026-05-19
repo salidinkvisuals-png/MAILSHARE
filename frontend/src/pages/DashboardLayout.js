@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import {
   LayoutGrid, Mail, Filter, Share2, Inbox, Activity,
-  LogOut, Menu, X, ChevronRight
+  LogOut, Menu, X, ChevronRight, Settings
 } from "lucide-react";
 
 const navItems = [
@@ -13,6 +13,7 @@ const navItems = [
   { to: "/app/shares", label: "My shares", icon: Share2 },
   { to: "/app/shared", label: "Shared with me", icon: Inbox },
   { to: "/app/activity", label: "Activity", icon: Activity },
+  { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
 export default function DashboardLayout() {
