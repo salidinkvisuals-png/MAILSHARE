@@ -13,6 +13,7 @@ import SharesPage from "@/pages/SharesPage";
 import SharedWithMePage from "@/pages/SharedWithMePage";
 import SharedInboxPage from "@/pages/SharedInboxPage";
 import ActivityPage from "@/pages/ActivityPage";
+import SettingsPage from "@/pages/SettingsPage";
 import LandingPage from "@/pages/LandingPage";
 
 const Protected = ({ children }) => {
@@ -20,7 +21,7 @@ const Protected = ({ children }) => {
   if (bootstrapping) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white" data-testid="auth-bootstrap">
-        <div className="font-mono text-xs uppercase tracking-widest text-neutral-500">Loading workspace…</div>
+        <div className="text-sm text-gray-400">Loading workspace…</div>
       </div>
     );
   }
@@ -40,7 +41,7 @@ function App() {
     <div className="App">
       <AuthProvider>
         <BrowserRouter>
-          <Toaster position="top-right" toastOptions={{ unstyled: false, className: "font-mono text-xs" }} />
+          <Toaster position="top-right" toastOptions={{ className: "text-sm" }} />
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<GuestOnly><AuthPage mode="login" /></GuestOnly>} />
@@ -61,6 +62,7 @@ function App() {
               <Route path="shared" element={<SharedWithMePage />} />
               <Route path="shared/:shareId" element={<SharedInboxPage />} />
               <Route path="activity" element={<ActivityPage />} />
+              <Route path="settings" element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
