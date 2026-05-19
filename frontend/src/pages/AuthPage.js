@@ -130,13 +130,7 @@ export default function AuthPage({ mode }) {
             </p>
           </div>
 
-          {isLogin && (
-            <div className="mt-4 p-4 bg-purple-50 rounded-xl">
-              <p className="text-xs font-medium text-purple-700 mb-1">Demo credentials</p>
-              <p className="text-xs text-gray-500">owner@mailshare.app / Owner123!</p>
-              <p className="text-xs text-gray-400">viewer@mailshare.app / Viewer123!</p>
-            </div>
-          )}
+
         </div>
       </div>
     </div>
