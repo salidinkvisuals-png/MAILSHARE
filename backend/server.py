@@ -570,6 +570,86 @@ async def list_emails(account_id: str, user: dict = Depends(get_current_user)):
     return out
 
 
+# ---------------- Email Actions ----------------
+@api.patch("/emails/{email_id}/read")
+async def mark_email_read(email_id: str, user: dict = Depends(get_current_user)):
+    e = await db.emails.find_one({"_id": ObjectId(email_id), "owner_id": str(user["_id"])})
+    if not e:
+        raise HTTPException(404, "Email not found")
+    current = e.get("read", False)
+    await db.emails.update_one({"_id": ObjectId(email_id)}, {"$set": {"read": not current}})
+    # Sync to Gmail if possible
+    if e.get("provider") == "gmail" and e.get("gmail_id"):
+        acct = await db.accounts.find_one({"_id": ObjectId(e["account_id"])})
+        if acct and acct.get("access_token"):
+            try:
+                label_action = "removeLabelIds" if not current else "addLabelIds"
+                requests.post(
+                    f"{GMAIL_API_BASE}/users/me/messages/{e['gmail_id']}/modify",
+                    headers={"Authorization": f"Bearer {acct['access_token']}"},
+                    json={label_action: ["UNREAD"]}
+                )
+            except Exception as ex:
+                logger.warning(f"Gmail read sync failed: {ex}")
+    return {"ok": True, "read": not current}
+
+
+@api.delete("/emails/{email_id}")
+async def delete_email(email_id: str, user: dict = Depends(get_current_user)):
+    e = await db.emails.find_one({"_id": ObjectId(email_id), "owner_id": str(user["_id"])})
+    if not e:
+        raise HTTPException(404, "Email not found")
+    # Archive in Gmail if possible
+    if e.get("provider") == "gmail" and e.get("gmail_id"):
+        acct = await db.accounts.find_one({"_id": ObjectId(e["account_id"])})
+        if acct and acct.get("access_token"):
+            try:
+                requests.post(
+                    f"{GMAIL_API_BASE}/users/me/messages/{e['gmail_id']}/modify",
+                    headers={"Authorization": f"Bearer {acct['access_token']}"},
+                    json={"removeLabelIds": ["INBOX"]}
+                )
+            except Exception as ex:
+                logger.warning(f"Gmail archive failed: {ex}")
+    await db.emails.delete_one({"_id": ObjectId(email_id)})
+    return {"ok": True}
+
+
+@api.patch("/emails/{email_id}/label")
+async def update_email_label(email_id: str, body: dict, user: dict = Depends(get_current_user)):
+    e = await db.emails.find_one({"_id": ObjectId(email_id), "owner_id": str(user["_id"])})
+    if not e:
+        raise HTTPException(404, "Email not found")
+    new_label = body.get("label", "")
+    await db.emails.update_one({"_id": ObjectId(email_id)}, {"$set": {"label": new_label}})
+    return {"ok": True, "label": new_label}
+
+
+@api.get("/accounts/{account_id}/labels")
+async def get_labels(account_id: str, user: dict = Depends(get_current_user)):
+    """Get all unique labels for an account."""
+    a = await db.accounts.find_one({"_id": ObjectId(account_id), "owner_id": str(user["_id"])})
+    if not a:
+        raise HTTPException(404, "Account not found")
+    # Get labels from Gmail API if connected
+    labels = []
+    if a.get("provider") == "gmail" and a.get("access_token"):
+        try:
+            r = requests.get(
+                f"{GMAIL_API_BASE}/users/me/labels",
+                headers={"Authorization": f"Bearer {a['access_token']}"}
+            )
+            if r.status_code == 200:
+                all_labels = r.json().get("labels", [])
+                labels = [l["name"] for l in all_labels if l.get("type") != "system"]
+        except Exception as ex:
+            logger.warning(f"Gmail labels fetch failed: {ex}")
+    # Also get labels from local emails
+    local_labels = await db.emails.distinct("label", {"account_id": account_id, "label": {"$ne": ""}})
+    all_labels = list(set(labels + local_labels))
+    return {"labels": sorted(all_labels)}
+
+
 # ---------------- Filters ----------------
 def email_matches_filter(email: dict, flt: dict) -> bool:
     if flt.get("from_contains"):
