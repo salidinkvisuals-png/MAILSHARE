@@ -56,8 +56,9 @@ export default function AccountsPage() {
   const syncAccount = async (id) => {
     setSyncing(id);
     try {
-      const r = await API.post(`/api/accounts/${id}/sync`);
-      toast.success(`Synced ${r.data.synced} new emails`);
+      // force=true deletes old emails and re-fetches fresh from Gmail
+      const r = await API.post(`/api/accounts/${id}/sync?force=true`);
+      toast.success(`Synced ${r.data.synced} emails`);
       load();
     } catch (err) {
       toast.error(err.response?.data?.detail || "Sync failed");
@@ -129,7 +130,7 @@ export default function AccountsPage() {
         <Mail size={16} className="text-purple-600 mt-0.5 flex-shrink-0" />
         <div>
           <p className="text-sm font-semibold text-purple-900">Connect your real Gmail account</p>
-          <p className="text-xs text-purple-600 mt-0.5">Click "Connect Gmail" to authorize with Google OAuth. Your emails will be synced securely.</p>
+          <p className="text-xs text-purple-600 mt-0.5">Click "Connect Gmail" to authorize with Google OAuth. Your emails will be synced securely. Use the refresh icon to force a full re-sync.</p>
         </div>
       </div>
 
@@ -198,7 +199,12 @@ export default function AccountsPage() {
               </div>
               <div className="flex items-center gap-2">
                 {a.provider === "gmail" && (
-                  <button onClick={() => syncAccount(a.id)} disabled={syncing === a.id} className="p-2 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors" title="Sync emails">
+                  <button
+                    onClick={() => syncAccount(a.id)}
+                    disabled={syncing === a.id}
+                    className="p-2 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors"
+                    title="Force re-sync emails from Gmail"
+                  >
                     {syncing === a.id ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                   </button>
                 )}
