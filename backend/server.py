@@ -1132,6 +1132,7 @@ async def poll_gmail_accounts():
                 try:
                     synced, ok, new_emails = await sync_gmail_account(account_id, owner_id, access_token, max_results=25)
                     if ok and new_emails:
+                        # 1) Notify the account owner's open inbox
                         for em in new_emails:
                             await broker.publish(owner_id, {
                                 "type": "new_email",
@@ -1147,6 +1148,36 @@ async def poll_gmail_accounts():
                                 },
                             })
                         logger.info(f"Poller pushed {len(new_emails)} new email(s) for account {account_id}")
+
+                        # 2) Notify share recipients whose filter matches a new email
+                        async for sh in db.shares.find({"account_id": account_id, "status": "active"}):
+                            flt = await db.filters.find_one({"_id": ObjectId(sh["filter_id"])})
+                            if not flt:
+                                continue
+                            recipient = sh.get("recipient_email")
+                            if not recipient:
+                                continue
+                            recipient_user = await db.users.find_one({"email": recipient})
+                            if not recipient_user:
+                                continue  # recipient has no account / not logged in
+                            recipient_id = str(recipient_user["_id"])
+                            if recipient_id not in broker._subscribers:
+                                continue  # recipient isn't viewing anything live right now
+                            for em in new_emails:
+                                if email_matches_filter(em, flt):
+                                    await broker.publish(recipient_id, {
+                                        "type": "new_shared_email",
+                                        "share_id": str(sh["_id"]),
+                                        "email": {
+                                            "id": em.get("id"),
+                                            "from_email": em.get("from_email"),
+                                            "from_name": em.get("from_name"),
+                                            "subject": em.get("subject"),
+                                            "received_at": em.get("received_at"),
+                                            "label": em.get("label"),
+                                            "read": em.get("read", False),
+                                        },
+                                    })
                 except Exception as ex:
                     logger.warning(f"Poller sync failed for {account_id}: {ex}")
         except asyncio.CancelledError:
