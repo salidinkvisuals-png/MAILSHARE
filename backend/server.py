@@ -186,8 +186,6 @@ def parse_gmail_message(msg: dict, account_id: str, owner_id: str) -> dict:
         return ""
 
     payload = msg.get("payload", {})
-
-    # Prefer HTML for proper rendering, fall back to plain text
     body = extract_html(payload)
     body_type = "html"
     if not body:
@@ -412,6 +410,8 @@ async def gmail_callback(request: Request, code: str = None, state: str = None, 
             "connected_at": datetime.now(timezone.utc).isoformat(),
         }})
         account_id = str(existing["_id"])
+        # Force fresh sync on reconnect — delete old emails and re-fetch
+        await db.emails.delete_many({"account_id": account_id})
     else:
         doc = {
             "owner_id": uid,
@@ -428,7 +428,7 @@ async def gmail_callback(request: Request, code: str = None, state: str = None, 
         await log_activity(uid, "account.connect", {"account_id": account_id, "provider": "gmail", "email": gmail_email})
 
     try:
-        await sync_gmail_account(account_id, uid, access_token, max_results=50)
+        await sync_gmail_account(account_id, uid, access_token, max_results=100)
     except Exception as e:
         logger.error(f"Initial Gmail sync failed: {e}")
 
@@ -456,7 +456,7 @@ async def gmail_oauth_url(user: dict = Depends(get_current_user)):
 
 
 @api.post("/accounts/{account_id}/sync")
-async def sync_account(account_id: str, user: dict = Depends(get_current_user)):
+async def sync_account(account_id: str, user: dict = Depends(get_current_user), force: bool = False):
     a = await db.accounts.find_one({"_id": ObjectId(account_id), "owner_id": str(user["_id"])})
     if not a:
         raise HTTPException(404, "Account not found")
@@ -469,7 +469,10 @@ async def sync_account(account_id: str, user: dict = Depends(get_current_user)):
             await db.accounts.update_one({"_id": ObjectId(account_id)}, {"$set": {"access_token": access_token}})
     if not access_token:
         raise HTTPException(400, "Account not properly connected. Please reconnect via OAuth.")
-    synced = await sync_gmail_account(account_id, str(user["_id"]), access_token)
+    if force:
+        await db.emails.delete_many({"account_id": account_id})
+        logger.info(f"Force sync: deleted existing emails for account {account_id}")
+    synced = await sync_gmail_account(account_id, str(user["_id"]), access_token, max_results=100)
     return {"ok": True, "synced": synced}
 
 
@@ -578,7 +581,6 @@ async def mark_email_read(email_id: str, user: dict = Depends(get_current_user))
         raise HTTPException(404, "Email not found")
     current = e.get("read", False)
     await db.emails.update_one({"_id": ObjectId(email_id)}, {"$set": {"read": not current}})
-    # Sync to Gmail if possible
     if e.get("provider") == "gmail" and e.get("gmail_id"):
         acct = await db.accounts.find_one({"_id": ObjectId(e["account_id"])})
         if acct and acct.get("access_token"):
@@ -599,7 +601,6 @@ async def delete_email(email_id: str, user: dict = Depends(get_current_user)):
     e = await db.emails.find_one({"_id": ObjectId(email_id), "owner_id": str(user["_id"])})
     if not e:
         raise HTTPException(404, "Email not found")
-    # Archive in Gmail if possible
     if e.get("provider") == "gmail" and e.get("gmail_id"):
         acct = await db.accounts.find_one({"_id": ObjectId(e["account_id"])})
         if acct and acct.get("access_token"):
@@ -627,11 +628,9 @@ async def update_email_label(email_id: str, body: dict, user: dict = Depends(get
 
 @api.get("/accounts/{account_id}/labels")
 async def get_labels(account_id: str, user: dict = Depends(get_current_user)):
-    """Get all unique labels for an account."""
     a = await db.accounts.find_one({"_id": ObjectId(account_id), "owner_id": str(user["_id"])})
     if not a:
         raise HTTPException(404, "Account not found")
-    # Get labels from Gmail API if connected
     labels = []
     if a.get("provider") == "gmail" and a.get("access_token"):
         try:
@@ -644,7 +643,6 @@ async def get_labels(account_id: str, user: dict = Depends(get_current_user)):
                 labels = [l["name"] for l in all_labels if l.get("type") != "system"]
         except Exception as ex:
             logger.warning(f"Gmail labels fetch failed: {ex}")
-    # Also get labels from local emails
     local_labels = await db.emails.distinct("label", {"account_id": account_id, "label": {"$ne": ""}})
     all_labels = list(set(labels + local_labels))
     return {"labels": sorted(all_labels)}
@@ -1056,10 +1054,8 @@ app.add_middleware(
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 
 if os.path.exists(static_dir):
-    # Serve static assets (JS, CSS, images)
     app.mount("/static", StaticFiles(directory=os.path.join(static_dir, "static")), name="assets")
 
-    # Catch-all: serve index.html for all non-API routes
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         index = os.path.join(static_dir, "index.html")
