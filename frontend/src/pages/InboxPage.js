@@ -42,6 +42,45 @@ export default function InboxPage() {
 
   useEffect(() => { load(); }, [accountId]);
 
+  // ---------------- Realtime SSE: live new-email updates ----------------
+  const [live, setLive] = useState(false);
+
+  useEffect(() => {
+    let es;
+    let reconnectTimer;
+
+    const connect = () => {
+      es = new EventSource("/api/stream", { withCredentials: true });
+
+      es.addEventListener("connected", () => setLive(true));
+
+      es.addEventListener("new_email", (e) => {
+        try {
+          const payload = JSON.parse(e.data);
+          if (payload.account_id !== accountId) return;
+          const incoming = payload.email;
+          setEmails((prev) => {
+            if (prev.some((x) => x.id === incoming.id)) return prev;
+            return [incoming, ...prev];
+          });
+          toast.success(`New email from ${incoming.from_name || incoming.from_email}`);
+        } catch {}
+      });
+
+      es.onerror = () => {
+        setLive(false);
+        es.close();
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+    };
+
+    connect();
+    return () => {
+      if (es) es.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+    };
+  }, [accountId]);
+
   const markRead = async (email) => {
     setActionLoading("read");
     try {
@@ -128,6 +167,15 @@ export default function InboxPage() {
             <List size={14} /> List
           </button>
         </div>
+        <span
+          className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-xl mr-1 ${
+            live ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-400"
+          }`}
+          title={live ? "Live — new emails appear automatically" : "Reconnecting…"}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${live ? "bg-green-500 animate-pulse" : "bg-gray-400"}`} />
+          {live ? "Live" : "Off"}
+        </span>
         <button onClick={load} className="p-2 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors" title="Refresh">
           <RefreshCw size={16} />
         </button>
