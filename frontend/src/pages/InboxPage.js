@@ -105,8 +105,8 @@ export default function InboxPage() {
 
       {/* Two-pane layout — fills remaining height, each pane scrolls independently */}
       <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-1 min-h-0">
-        {/* Email list — independently scrollable */}
-        <div className="w-72 border-r border-gray-100 flex-shrink-0 overflow-y-auto h-full">
+        {/* Email list — independently scrollable, each row is a clear button */}
+        <div className="w-72 border-r border-gray-100 flex-shrink-0 overflow-y-auto h-full p-2 space-y-2">
           {emails.length === 0 ? (
             <div className="p-8 text-center">
               <Mail size={24} className="mx-auto text-gray-200 mb-2" />
@@ -118,26 +118,31 @@ export default function InboxPage() {
               <button
                 key={e.id}
                 onClick={() => setSelected(e)}
-                className={`w-full text-left px-4 py-3.5 border-b border-gray-50 transition-colors relative ${
-                  isOpen ? "bg-purple-50" : "hover:bg-gray-50"
+                className={`w-full text-left px-3 py-3 rounded-xl transition-all flex items-center gap-2 ${
+                  isOpen
+                    ? "bg-purple-50 border-2 border-purple-600"
+                    : "bg-white border border-gray-100 hover:border-purple-200 hover:bg-gray-50"
                 }`}
               >
-                {/* Active pointer bar */}
-                {isOpen && <span className="absolute left-0 top-0 bottom-0 w-1 bg-purple-600 rounded-r" />}
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <p className={`text-xs truncate ${e.read ? "text-gray-500 font-normal" : "text-gray-900 font-semibold"}`}>
-                    {e.from_name || e.from_email}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <p className={`text-xs truncate ${e.read ? "text-gray-500 font-normal" : "text-gray-900 font-semibold"}`}>
+                      {e.from_name || e.from_email}
+                    </p>
+                    <span className="text-xs text-gray-300 flex-shrink-0">{formatTime(e.received_at)}</span>
+                  </div>
+                  <p className={`text-xs truncate mb-1 ${isOpen ? "text-purple-700 font-medium" : e.read ? "text-gray-400" : "text-gray-600"}`}>
+                    {e.subject}
                   </p>
-                  <span className="text-xs text-gray-300 flex-shrink-0">{formatTime(e.received_at)}</span>
+                  <div className="flex items-center gap-1">
+                    {!e.read && <span className="w-1.5 h-1.5 bg-purple-500 rounded-full flex-shrink-0" />}
+                    {e.label && <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full truncate">{e.label}</span>}
+                  </div>
                 </div>
-                <p className={`text-xs truncate mb-1 ${isOpen ? "text-purple-700 font-medium" : e.read ? "text-gray-400" : "text-gray-600"}`}>
-                  {e.subject}
-                </p>
-                <div className="flex items-center gap-1">
-                  {!e.read && <span className="w-1.5 h-1.5 bg-purple-500 rounded-full flex-shrink-0" />}
-                  {e.label && <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full truncate">{e.label}</span>}
-                  {isOpen && <ChevronRight size={12} className="text-purple-500 ml-auto flex-shrink-0" />}
-                </div>
+                <ChevronRight
+                  size={16}
+                  className={`flex-shrink-0 ${isOpen ? "text-purple-600" : "text-gray-300"}`}
+                />
               </button>
             );
           })}
