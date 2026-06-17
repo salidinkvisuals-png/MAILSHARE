@@ -59,10 +59,14 @@ export default function InboxPage() {
           const payload = JSON.parse(e.data);
           if (payload.account_id !== accountId) return;
           const incoming = payload.email;
-          setEmails((prev) => {
-            if (prev.some((x) => x.id === incoming.id)) return prev;
-            return [incoming, ...prev];
-          });
+          // Re-fetch the full list so the new email has complete data (body, etc.)
+          // and the list always matches the database.
+          API.get(`/api/accounts/${accountId}/emails`)
+            .then((r) => setEmails(r.data))
+            .catch(() => {
+              // Fallback: insert the trimmed object if the refetch fails
+              setEmails((prev) => prev.some((x) => x.id === incoming.id) ? prev : [incoming, ...prev]);
+            });
           toast.success(`New email from ${incoming.from_name || incoming.from_email}`);
         } catch {}
       });
@@ -168,14 +172,9 @@ export default function InboxPage() {
           </button>
         </div>
         <span
-          className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-xl mr-1 ${
-            live ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-400"
-          }`}
+          className={`w-2 h-2 rounded-full mr-1.5 ${live ? "bg-green-500 animate-pulse" : "bg-gray-300"}`}
           title={live ? "Live — new emails appear automatically" : "Reconnecting…"}
-        >
-          <span className={`w-1.5 h-1.5 rounded-full ${live ? "bg-green-500 animate-pulse" : "bg-gray-400"}`} />
-          {live ? "Live" : "Off"}
-        </span>
+        />
         <button onClick={load} className="p-2 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors" title="Refresh">
           <RefreshCw size={16} />
         </button>
