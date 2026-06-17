@@ -182,9 +182,9 @@ export default function AccountsPage() {
           </button>
         </div>
       ) : (
-        <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden" data-testid="accounts-table">
-          {accounts.map((a, i) => (
-            <div key={a.id} className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors ${i !== accounts.length - 1 ? "border-b border-gray-50" : ""}`} data-testid={`account-row-${a.id}`}>
+        <div className="space-y-3" data-testid="accounts-table">
+          {accounts.map((a) => (
+            <div key={a.id} className="flex items-center gap-4 px-5 py-4 bg-white border border-gray-100 rounded-2xl hover:border-purple-200 transition-colors" data-testid={`account-row-${a.id}`}>
               <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-700 font-bold text-sm flex-shrink-0">
                 {a.email[0].toUpperCase()}
               </div>
@@ -198,20 +198,29 @@ export default function AccountsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => nav(`/app/accounts/${a.id}`)}
+                  className="flex items-center gap-1.5 bg-purple-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-purple-700 transition-colors"
+                >
+                  Open inbox
+                  <ChevronRight size={15} />
+                </button>
                 {a.provider === "gmail" && (
                   <button
                     onClick={() => syncAccount(a.id)}
                     disabled={syncing === a.id}
-                    className="p-2 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors"
+                    className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors"
                     title="Force re-sync emails from Gmail"
                   >
                     {syncing === a.id ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                   </button>
                 )}
-                <button onClick={() => nav(`/app/accounts/${a.id}`)} className="p-2 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors">
-                  <ChevronRight size={16} />
-                </button>
-                <button onClick={() => remove(a.id)} disabled={deleting === a.id} className="p-2 rounded-xl hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
+                <button
+                  onClick={() => remove(a.id)}
+                  disabled={deleting === a.id}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 hover:bg-red-50 hover:border-red-200 text-gray-400 hover:text-red-500 transition-colors"
+                  title="Disconnect account"
+                >
                   {deleting === a.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                 </button>
               </div>
