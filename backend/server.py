@@ -147,13 +147,14 @@ def gmail_refresh_access_token(refresh_token: str) -> Optional[str]:
         return None
 
 
-def gmail_get_messages(access_token: str, max_results: int = 50) -> list:
+def gmail_get_messages(access_token: str, max_results: int = 50):
+    """Returns (messages_list, ok) where ok=False means the request failed (e.g. expired token)."""
     headers = {"Authorization": f"Bearer {access_token}"}
     r = requests.get(f"{GMAIL_API_BASE}/users/me/messages", headers=headers, params={"maxResults": max_results})
     if r.status_code != 200:
-        logger.error(f"Gmail list messages failed: {r.text}")
-        return []
-    return r.json().get("messages", [])
+        logger.error(f"Gmail list messages failed ({r.status_code}): {r.text}")
+        return [], False
+    return r.json().get("messages", []), True
 
 
 def gmail_get_message_detail(access_token: str, msg_id: str) -> Optional[dict]:
@@ -229,8 +230,16 @@ def parse_gmail_message(msg: dict, account_id: str, owner_id: str) -> dict:
     }
 
 
-async def sync_gmail_account(account_id: str, owner_id: str, access_token: str, max_results: int = 50):
-    messages = gmail_get_messages(access_token, max_results=max_results)
+async def sync_gmail_account(account_id: str, owner_id: str, access_token: str, max_results: int = 50, replace: bool = False):
+    """Fetch messages from Gmail. Returns (synced_count, ok).
+    If replace=True, existing emails are deleted ONLY after a successful fetch."""
+    messages, ok = gmail_get_messages(access_token, max_results=max_results)
+    if not ok:
+        # Token likely expired or revoked — do NOT touch existing emails
+        return 0, False
+    if replace:
+        await db.emails.delete_many({"account_id": account_id})
+        logger.info(f"Replace sync: cleared existing emails for account {account_id}")
     synced = 0
     for m in messages:
         exists = await db.emails.find_one({"gmail_id": m["id"], "account_id": account_id})
@@ -243,7 +252,7 @@ async def sync_gmail_account(account_id: str, owner_id: str, access_token: str, 
         await db.emails.insert_one(doc)
         synced += 1
     logger.info(f"Synced {synced} new emails for account {account_id}")
-    return synced
+    return synced, True
 
 
 # ---------------- Models ----------------
@@ -410,8 +419,6 @@ async def gmail_callback(request: Request, code: str = None, state: str = None, 
             "connected_at": datetime.now(timezone.utc).isoformat(),
         }})
         account_id = str(existing["_id"])
-        # Force fresh sync on reconnect — delete old emails and re-fetch
-        await db.emails.delete_many({"account_id": account_id})
     else:
         doc = {
             "owner_id": uid,
@@ -428,7 +435,8 @@ async def gmail_callback(request: Request, code: str = None, state: str = None, 
         await log_activity(uid, "account.connect", {"account_id": account_id, "provider": "gmail", "email": gmail_email})
 
     try:
-        await sync_gmail_account(account_id, uid, access_token, max_results=100)
+        # replace=True clears old emails only AFTER a successful fetch (no data loss)
+        await sync_gmail_account(account_id, uid, access_token, max_results=100, replace=True)
     except Exception as e:
         logger.error(f"Initial Gmail sync failed: {e}")
 
@@ -462,17 +470,22 @@ async def sync_account(account_id: str, user: dict = Depends(get_current_user), 
         raise HTTPException(404, "Account not found")
     if a.get("provider") != "gmail":
         raise HTTPException(400, "Sync only supported for Gmail accounts currently")
+
+    # Always refresh the access token first — access tokens expire after ~1 hour.
     access_token = a.get("access_token")
-    if not access_token and a.get("refresh_token"):
-        access_token = gmail_refresh_access_token(a["refresh_token"])
-        if access_token:
-            await db.accounts.update_one({"_id": ObjectId(account_id)}, {"$set": {"access_token": access_token}})
+    if a.get("refresh_token"):
+        fresh = gmail_refresh_access_token(a["refresh_token"])
+        if fresh:
+            access_token = fresh
+            await db.accounts.update_one({"_id": ObjectId(account_id)}, {"$set": {"access_token": fresh}})
+
     if not access_token:
         raise HTTPException(400, "Account not properly connected. Please reconnect via OAuth.")
-    if force:
-        await db.emails.delete_many({"account_id": account_id})
-        logger.info(f"Force sync: deleted existing emails for account {account_id}")
-    synced = await sync_gmail_account(account_id, str(user["_id"]), access_token, max_results=100)
+
+    # On force, replace happens INSIDE sync only after a successful fetch (no data loss).
+    synced, ok = await sync_gmail_account(account_id, str(user["_id"]), access_token, max_results=100, replace=force)
+    if not ok:
+        raise HTTPException(400, "Could not reach Gmail. Your connection may have expired — please reconnect the account.")
     return {"ok": True, "synced": synced}
 
 
