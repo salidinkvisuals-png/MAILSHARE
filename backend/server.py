@@ -8,6 +8,8 @@ load_dotenv(ROOT_DIR / ".env")
 import os
 import logging
 import base64
+import asyncio
+import json
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from urllib.parse import urlencode
@@ -18,7 +20,7 @@ import requests
 from bson import ObjectId
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, FileResponse
+from fastapi.responses import RedirectResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, EmailStr, Field
@@ -41,6 +43,39 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mailshare")
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
+# ---------------- Realtime: poll interval + SSE event broker ----------------
+POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL_SECONDS", "30"))
+
+class EventBroker:
+    """Keeps a queue of new-email events per user so SSE streams can deliver them live."""
+    def __init__(self):
+        # user_id -> set of asyncio.Queue (one per open browser tab/connection)
+        self._subscribers: dict[str, set] = {}
+
+    def subscribe(self, user_id: str) -> asyncio.Queue:
+        q = asyncio.Queue()
+        self._subscribers.setdefault(user_id, set()).add(q)
+        return q
+
+    def unsubscribe(self, user_id: str, q: asyncio.Queue):
+        subs = self._subscribers.get(user_id)
+        if subs and q in subs:
+            subs.discard(q)
+            if not subs:
+                self._subscribers.pop(user_id, None)
+
+    async def publish(self, user_id: str, event: dict):
+        for q in list(self._subscribers.get(user_id, [])):
+            try:
+                q.put_nowait(event)
+            except Exception:
+                pass
+
+    def has_subscribers(self) -> bool:
+        return any(self._subscribers.values())
+
+broker = EventBroker()
 
 # ---------------- Gmail OAuth Config ----------------
 GMAIL_CLIENT_ID = os.environ.get("GMAIL_CLIENT_ID", "")
@@ -231,16 +266,18 @@ def parse_gmail_message(msg: dict, account_id: str, owner_id: str) -> dict:
 
 
 async def sync_gmail_account(account_id: str, owner_id: str, access_token: str, max_results: int = 50, replace: bool = False):
-    """Fetch messages from Gmail. Returns (synced_count, ok).
-    If replace=True, existing emails are deleted ONLY after a successful fetch."""
+    """Fetch messages from Gmail. Returns (synced_count, ok, new_emails).
+    If replace=True, existing emails are deleted ONLY after a successful fetch.
+    new_emails is a list of the freshly-inserted email docs (for realtime push)."""
     messages, ok = gmail_get_messages(access_token, max_results=max_results)
     if not ok:
         # Token likely expired or revoked — do NOT touch existing emails
-        return 0, False
+        return 0, False, []
     if replace:
         await db.emails.delete_many({"account_id": account_id})
         logger.info(f"Replace sync: cleared existing emails for account {account_id}")
     synced = 0
+    new_emails = []
     for m in messages:
         exists = await db.emails.find_one({"gmail_id": m["id"], "account_id": account_id})
         if exists:
@@ -249,10 +286,13 @@ async def sync_gmail_account(account_id: str, owner_id: str, access_token: str, 
         if not detail:
             continue
         doc = parse_gmail_message(detail, account_id, owner_id)
-        await db.emails.insert_one(doc)
+        res = await db.emails.insert_one(doc)
+        doc["id"] = str(res.inserted_id)
+        doc.pop("_id", None)
+        new_emails.append(doc)
         synced += 1
     logger.info(f"Synced {synced} new emails for account {account_id}")
-    return synced, True
+    return synced, True, new_emails
 
 
 # ---------------- Models ----------------
@@ -483,7 +523,7 @@ async def sync_account(account_id: str, user: dict = Depends(get_current_user), 
         raise HTTPException(400, "Account not properly connected. Please reconnect via OAuth.")
 
     # On force, replace happens INSIDE sync only after a successful fetch (no data loss).
-    synced, ok = await sync_gmail_account(account_id, str(user["_id"]), access_token, max_results=100, replace=force)
+    synced, ok, new_emails = await sync_gmail_account(account_id, str(user["_id"]), access_token, max_results=100, replace=force)
     if not ok:
         raise HTTPException(400, "Could not reach Gmail. Your connection may have expired — please reconnect the account.")
     return {"ok": True, "synced": synced}
@@ -1017,6 +1057,105 @@ async def get_stats(user: dict = Depends(require_admin)):
     }
 
 
+# ---------------- Realtime: SSE stream + background poller ----------------
+async def _get_user_from_token(token):
+    """Validate a JWT access token passed as a query param (EventSource can't set headers)."""
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, jwt_secret(), algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != "access":
+            return None
+        return await db.users.find_one({"_id": ObjectId(payload["sub"])})
+    except jwt.PyJWTError:
+        return None
+
+
+@api.get("/stream")
+async def stream(request: Request, token: str = ""):
+    """Server-Sent Events stream. The browser opens this and keeps it open;
+    the poller pushes 'new_email' events down it in realtime. A heartbeat keeps it alive."""
+    user = await _get_user_from_token(token)
+    if not user:
+        cookie_token = request.cookies.get("access_token")
+        user = await _get_user_from_token(cookie_token or "")
+    if not user:
+        raise HTTPException(401, "Not authenticated")
+
+    user_id = str(user["_id"])
+    queue = broker.subscribe(user_id)
+
+    async def event_generator():
+        yield f"event: connected\ndata: {json.dumps({'ok': True})}\n\n"
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=15.0)
+                    yield f"event: {event.get('type', 'message')}\ndata: {json.dumps(event)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": heartbeat\n\n"
+        finally:
+            broker.unsubscribe(user_id, queue)
+
+    headers = {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    return StreamingResponse(event_generator(), media_type="text/event-stream", headers=headers)
+
+
+async def poll_gmail_accounts():
+    """Background loop: every POLL_INTERVAL_SECONDS, check each connected Gmail
+    account for new mail and push any new emails to that user's SSE stream."""
+    logger.info(f"Gmail poller started (every {POLL_INTERVAL_SECONDS}s)")
+    while True:
+        try:
+            await asyncio.sleep(POLL_INTERVAL_SECONDS)
+            if not broker.has_subscribers():
+                continue
+            async for a in db.accounts.find({"provider": "gmail", "status": "connected"}):
+                owner_id = a.get("owner_id")
+                if owner_id not in broker._subscribers:
+                    continue
+                account_id = str(a["_id"])
+                access_token = a.get("access_token")
+                if a.get("refresh_token"):
+                    fresh = gmail_refresh_access_token(a["refresh_token"])
+                    if fresh:
+                        access_token = fresh
+                        await db.accounts.update_one({"_id": a["_id"]}, {"$set": {"access_token": fresh}})
+                if not access_token:
+                    continue
+                try:
+                    synced, ok, new_emails = await sync_gmail_account(account_id, owner_id, access_token, max_results=25)
+                    if ok and new_emails:
+                        for em in new_emails:
+                            await broker.publish(owner_id, {
+                                "type": "new_email",
+                                "account_id": account_id,
+                                "email": {
+                                    "id": em.get("id"),
+                                    "from_email": em.get("from_email"),
+                                    "from_name": em.get("from_name"),
+                                    "subject": em.get("subject"),
+                                    "received_at": em.get("received_at"),
+                                    "label": em.get("label"),
+                                    "read": em.get("read", False),
+                                },
+                            })
+                        logger.info(f"Poller pushed {len(new_emails)} new email(s) for account {account_id}")
+                except Exception as ex:
+                    logger.warning(f"Poller sync failed for {account_id}: {ex}")
+        except asyncio.CancelledError:
+            logger.info("Gmail poller stopped")
+            break
+        except Exception as ex:
+            logger.error(f"Poller loop error: {ex}")
+
+
 # ---------------- Startup ----------------
 async def seed_admin():
     admin_email = os.environ.get("ADMIN_EMAIL", "owner@mailshare.app").lower()
@@ -1047,6 +1186,8 @@ async def on_startup():
     await db.shares.create_index("owner_id")
     await db.activity.create_index([("user_id", 1), ("at", -1)])
     await seed_admin()
+    # Launch the background Gmail poller (drives realtime SSE updates)
+    asyncio.create_task(poll_gmail_accounts())
     logger.info("Mailshare startup complete.")
 
 
