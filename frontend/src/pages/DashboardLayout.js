@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import {
   LayoutGrid, Mail, Filter, Share2, Inbox, Activity,
-  LogOut, Menu, X, Settings
+  LogOut, Menu, Settings
 } from "lucide-react";
 
 const navItems = [
@@ -28,7 +28,6 @@ export default function DashboardLayout() {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-purple-100">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-purple-600 flex items-center justify-center">
@@ -38,7 +37,6 @@ export default function DashboardLayout() {
         </div>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 py-4 px-3 overflow-y-auto" data-testid="sidebar-nav">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">Workspace</p>
         {navItems.map(({ to, label, icon: Icon, end }) => (
@@ -62,7 +60,6 @@ export default function DashboardLayout() {
         ))}
       </nav>
 
-      {/* User */}
       <div className="border-t border-purple-100 p-4">
         <div className="flex items-center gap-3 mb-3 px-1">
           <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-sm">
@@ -105,10 +102,10 @@ export default function DashboardLayout() {
         </div>
       )}
 
-      {/* Main — overflow-hidden so child pages control their own scroll */}
+      {/* Main — normal scrolling for all pages */}
       <div className="flex-1 lg:ml-60 flex flex-col min-h-screen">
         {/* Mobile header */}
-        <header className="lg:hidden h-14 border-b border-purple-100 bg-white flex items-center px-4 gap-4 sticky top-0 z-30 flex-shrink-0">
+        <header className="lg:hidden h-16 border-b border-purple-100 bg-white flex items-center px-4 gap-4 sticky top-0 z-30 flex-shrink-0">
           <button
             onClick={() => setMobileOpen(true)}
             className="p-2 rounded-xl hover:bg-purple-50 transition-colors"
@@ -124,8 +121,7 @@ export default function DashboardLayout() {
           </div>
         </header>
 
-        {/* Page content — overflow-hidden + flex so dual-scroll pages work */}
-        <main className="flex-1 overflow-hidden p-6 lg:p-8 flex flex-col">
+        <main className="flex-1 p-6 lg:p-8">
           <Outlet />
         </main>
       </div>
