@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import {
   LayoutGrid, Mail, Filter, Share2, Inbox, Activity,
-  LogOut, Menu, X, ChevronRight, Settings
+  LogOut, Menu, X, Settings
 } from "lucide-react";
 
 const navItems = [
@@ -105,10 +105,10 @@ export default function DashboardLayout() {
         </div>
       )}
 
-      {/* Main */}
+      {/* Main — overflow-hidden so child pages control their own scroll */}
       <div className="flex-1 lg:ml-60 flex flex-col min-h-screen">
         {/* Mobile header */}
-        <header className="lg:hidden h-16 border-b border-purple-100 bg-white flex items-center px-4 gap-4 sticky top-0 z-30">
+        <header className="lg:hidden h-14 border-b border-purple-100 bg-white flex items-center px-4 gap-4 sticky top-0 z-30 flex-shrink-0">
           <button
             onClick={() => setMobileOpen(true)}
             className="p-2 rounded-xl hover:bg-purple-50 transition-colors"
@@ -124,7 +124,8 @@ export default function DashboardLayout() {
           </div>
         </header>
 
-        <main className="flex-1 p-6 lg:p-8">
+        {/* Page content — overflow-hidden + flex so dual-scroll pages work */}
+        <main className="flex-1 overflow-hidden p-6 lg:p-8 flex flex-col">
           <Outlet />
         </main>
       </div>
