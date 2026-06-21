@@ -43,7 +43,7 @@ export default function SharedInboxPage() {
   );
 
   return (
-    <div className="animate-fade-up flex flex-col flex-1 min-h-0">
+    <div className="animate-fade-up flex flex-col" style={{ height: "calc(100vh - 180px)" }}>
       {/* Header */}
       <div className="flex items-center gap-3 mb-4 flex-shrink-0">
         <button onClick={() => nav("/app/shared")} className="p-2 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors">
