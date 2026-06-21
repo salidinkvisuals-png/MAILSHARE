@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { API } from "@/lib/auth";
+import { useNotifications } from "@/lib/notifications";
 import { toast } from "sonner";
 import { ArrowLeft, Mail, Loader2, MailOpen, Archive, Tag, X, RefreshCw, ChevronRight, LayoutGrid, List } from "lucide-react";
 
@@ -42,48 +43,18 @@ export default function InboxPage() {
 
   useEffect(() => { load(); }, [accountId]);
 
-  // ---------------- Realtime SSE: live new-email updates ----------------
-  const [live, setLive] = useState(false);
+  // ---------------- Realtime: react to app-wide new-email signal ----------------
+  const { live, emailTick } = useNotifications();
 
   useEffect(() => {
-    let es;
-    let reconnectTimer;
-
-    const connect = () => {
-      es = new EventSource("/api/stream", { withCredentials: true });
-
-      es.addEventListener("connected", () => setLive(true));
-
-      es.addEventListener("new_email", (e) => {
-        try {
-          const payload = JSON.parse(e.data);
-          if (payload.account_id !== accountId) return;
-          const incoming = payload.email;
-          // Re-fetch the full list so the new email has complete data (body, etc.)
-          // and the list always matches the database.
-          API.get(`/api/accounts/${accountId}/emails`)
-            .then((r) => setEmails(r.data))
-            .catch(() => {
-              // Fallback: insert the trimmed object if the refetch fails
-              setEmails((prev) => prev.some((x) => x.id === incoming.id) ? prev : [incoming, ...prev]);
-            });
-          toast.success(`New email from ${incoming.from_name || incoming.from_email}`);
-        } catch {}
-      });
-
-      es.onerror = () => {
-        setLive(false);
-        es.close();
-        reconnectTimer = setTimeout(connect, 3000);
-      };
-    };
-
-    connect();
-    return () => {
-      if (es) es.close();
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-    };
-  }, [accountId]);
+    // When the app-wide listener reports a new email, refetch this account's list
+    // so new mail (including threaded replies) shows with full data, no refresh.
+    if (emailTick > 0) {
+      API.get(`/api/accounts/${accountId}/emails`)
+        .then((r) => setEmails(r.data))
+        .catch(() => {});
+    }
+  }, [emailTick, accountId]);
 
   const markRead = async (email) => {
     setActionLoading("read");
