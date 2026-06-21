@@ -3,6 +3,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { NotificationsProvider } from "@/lib/notifications";
 import AuthPage from "@/pages/AuthPage";
 import DashboardLayout from "@/pages/DashboardLayout";
 import OverviewPage from "@/pages/OverviewPage";
@@ -40,33 +41,35 @@ function App() {
   return (
     <div className="App">
       <AuthProvider>
-        <BrowserRouter>
-          <Toaster position="top-right" toastOptions={{ className: "text-sm" }} />
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<GuestOnly><AuthPage mode="login" /></GuestOnly>} />
-            <Route path="/register" element={<GuestOnly><AuthPage mode="register" /></GuestOnly>} />
-            <Route
-              path="/app"
-              element={
-                <Protected>
-                  <DashboardLayout />
-                </Protected>
-              }
-            >
-              <Route index element={<OverviewPage />} />
-              <Route path="accounts" element={<AccountsPage />} />
-              <Route path="accounts/:accountId" element={<InboxPage />} />
-              <Route path="filters" element={<FiltersPage />} />
-              <Route path="shares" element={<SharesPage />} />
-              <Route path="shared" element={<SharedWithMePage />} />
-              <Route path="shared/:shareId" element={<SharedInboxPage />} />
-              <Route path="activity" element={<ActivityPage />} />
-              <Route path="settings" element={<SettingsPage />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
+        <NotificationsProvider>
+          <BrowserRouter>
+            <Toaster position="top-right" toastOptions={{ className: "text-sm" }} />
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<GuestOnly><AuthPage mode="login" /></GuestOnly>} />
+              <Route path="/register" element={<GuestOnly><AuthPage mode="register" /></GuestOnly>} />
+              <Route
+                path="/app"
+                element={
+                  <Protected>
+                    <DashboardLayout />
+                  </Protected>
+                }
+              >
+                <Route index element={<OverviewPage />} />
+                <Route path="accounts" element={<AccountsPage />} />
+                <Route path="accounts/:accountId" element={<InboxPage />} />
+                <Route path="filters" element={<FiltersPage />} />
+                <Route path="shares" element={<SharesPage />} />
+                <Route path="shared" element={<SharedWithMePage />} />
+                <Route path="shared/:shareId" element={<SharedInboxPage />} />
+                <Route path="activity" element={<ActivityPage />} />
+                <Route path="settings" element={<SettingsPage />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </NotificationsProvider>
       </AuthProvider>
     </div>
   );
