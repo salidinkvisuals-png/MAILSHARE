@@ -745,6 +745,20 @@ async def list_filters(user: dict = Depends(get_current_user)):
     return out
 
 
+@api.put("/filters/{filter_id}")
+async def update_filter(filter_id: str, body: FilterIn, user: dict = Depends(get_current_user)):
+    f = await db.filters.find_one({"_id": ObjectId(filter_id), "owner_id": str(user["_id"])})
+    if not f:
+        raise HTTPException(404, "Filter not found or not yours")
+    acct = await db.accounts.find_one({"_id": ObjectId(body.account_id), "owner_id": str(user["_id"])})
+    if not acct:
+        raise HTTPException(404, "Account not found")
+    updates = body.model_dump()
+    await db.filters.update_one({"_id": ObjectId(filter_id)}, {"$set": updates})
+    await log_activity(str(user["_id"]), "filter.update", {"filter_id": filter_id, "name": body.name})
+    return {"ok": True, "id": filter_id, **updates}
+
+
 @api.delete("/filters/{filter_id}")
 async def delete_filter(filter_id: str, user: dict = Depends(get_current_user)):
     f = await db.filters.find_one({"_id": ObjectId(filter_id), "owner_id": str(user["_id"])})
@@ -801,6 +815,26 @@ async def list_shares(user: dict = Depends(get_current_user)):
         s["id"] = str(s.pop("_id"))
         out.append(s)
     return out
+
+
+@api.put("/shares/{share_id}")
+async def update_share(share_id: str, body: ShareIn, user: dict = Depends(get_current_user)):
+    s = await db.shares.find_one({"_id": ObjectId(share_id), "owner_id": str(user["_id"])})
+    if not s:
+        raise HTTPException(404, "Share not found or not yours")
+    f = await db.filters.find_one({"_id": ObjectId(body.filter_id), "owner_id": str(user["_id"])})
+    if not f:
+        raise HTTPException(404, "Filter not found")
+    updates = {
+        "filter_id": body.filter_id,
+        "account_id": f["account_id"],
+        "forward_enabled": body.forward_enabled,
+        "forward_to_email": (body.forward_to_email or s["recipient_email"]).lower(),
+        "note": body.note,
+    }
+    await db.shares.update_one({"_id": ObjectId(share_id)}, {"$set": updates})
+    await log_activity(str(user["_id"]), "share.update", {"share_id": share_id})
+    return {"ok": True, "id": share_id}
 
 
 @api.delete("/shares/{share_id}")
